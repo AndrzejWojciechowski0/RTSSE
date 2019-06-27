@@ -15,7 +15,7 @@ const stf = path.join(__dirname, 'index.html');
 app.get('/', (req, res) => res.sendFile(stf))
 
 
-let scores = [];
+let scores = [exampleScore,exampleScore,exampleScore,exampleScore];
 let limit = 10;
 const password = "q";
 
@@ -24,12 +24,23 @@ function log(txt){
 }
 
 function addScore(score){
-  // sprawdź czy podano liczbę pkt.
-  // sprawdź czy wynik kwalifikuje się do tabeli
-  // zagwarantuj że ustawiono nick
-  // zaktualizuj tablicę
-  // powiedz wszystkim że zmieniły się wyniki
-  // log
+  if(score.points === NaN) {
+    log("wynik odrzucony - nieprawidłowa liczba pkt.")
+    return;
+  }
+  if(scores.lenght >= limit ){
+    const najgorszyWynik = scores[scores.lenght - 1];
+    if(najgorszyWynik.points >= score.points) {
+      log("wynik odrzucony - zbyt mało pkt.");
+    }
+  }  
+  if(!score.nick) score.nick = "owca"; 
+  scores.push(score);
+  scores.sort((a,b)=> b.points - a.points );
+  scores = scores.slice(0,limit);
+  io.emit("update",scores);
+  log(`dodano wynik ${score.nick}:${score.points}, (${scores.length}/${limit})`);
+  
 } 
 
 
@@ -42,11 +53,14 @@ app.use((req, res, next) => {
 app.use(bodyParser.json())
 
 app.get('/highscores', (req, res) => {
-  // send scores
-  res.json({})
+  log("Ktoś zapytał o wynik")
+  res.json(scores)
 })
 app.post('/highscores', (req, res) => {
-  // add score
+  log(JSON.stringify(req.body))
+  const newScore = req.body;
+  newScore.points = Number(newScore.points);
+  addScore(newScore)
   res.json({});
 })
 app.post('/limit', (req, res) => {
